@@ -17,7 +17,7 @@ function InitUser() {
           try {
             const user = await api.createAnonymousUser();
             setUserId(user.id);
-          } catch {}
+          } catch (e) { console.log('Init user error', e); }
         }
       }
     })();
