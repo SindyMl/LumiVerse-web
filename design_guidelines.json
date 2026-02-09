@@ -1,0 +1,137 @@
+{
+  "typography": {
+    "font_families": {
+      "headings": {
+        "name": "Cinzel",
+        "url": "https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&display=swap",
+        "fallback": "serif",
+        "usage": "Use for all H1-H3 headings. Adds the 'Sacred Manuscript' feel."
+      },
+      "body": {
+        "name": "Lato",
+        "url": "https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap",
+        "fallback": "sans-serif",
+        "usage": "Use for Bible text, UI labels, and long-form reading. High legibility."
+      },
+      "accent": {
+        "name": "Cormorant Garamond",
+        "url": "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap",
+        "fallback": "serif",
+        "usage": "Use for verse numbers, pull quotes, and section introductions."
+      }
+    },
+    "scale": {
+      "h1": "text-4xl md:text-5xl font-bold tracking-tight",
+      "h2": "text-3xl md:text-4xl font-semibold tracking-tight",
+      "h3": "text-2xl md:text-3xl font-medium",
+      "body_lg": "text-lg md:text-xl leading-relaxed",
+      "body_base": "text-base leading-loose",
+      "caption": "text-sm tracking-wide uppercase opacity-70"
+    }
+  },
+  "colors": {
+    "light": {
+      "background": "#F5F2E9",
+      "background_secondary": "#EAE5D9",
+      "foreground": "#2A2A2A",
+      "primary": "#C5A059",
+      "primary_foreground": "#FFFFFF",
+      "accent": "#3B82F6",
+      "border": "#D4C5A9",
+      "surface": "#FFFFFF"
+    },
+    "dark": {
+      "background": "#02040A",
+      "background_secondary": "#0A0A0A",
+      "foreground": "#E0E0E0",
+      "primary": "#FFD700",
+      "primary_foreground": "#000000",
+      "accent": "#1E90FF",
+      "border": "#333333",
+      "surface": "#121212"
+    },
+    "bible_sections": {
+      "law": "#8B4513",
+      "history": "#A0522D",
+      "poetry": "#C71585",
+      "prophets": "#4B0082",
+      "gospels": "#FFD700",
+      "acts": "#FF4500",
+      "epistles": "#2E8B57",
+      "revelation": "#1E90FF"
+    },
+    "status": {
+      "success": "#10B981",
+      "error": "#EF4444",
+      "warning": "#F59E0B"
+    }
+  },
+  "visual_enhancers": {
+    "shadows": {
+      "glow_sm": "0 0 10px rgba(255, 215, 0, 0.3)",
+      "glow_md": "0 0 20px rgba(255, 215, 0, 0.4)",
+      "glow_lg": "0 0 30px rgba(255, 215, 0, 0.5)",
+      "parchment": "2px 4px 12px rgba(0,0,0,0.08)"
+    },
+    "textures": {
+      "parchment": "url('https://images.unsplash.com/photo-1706271952285-01b5e3fc2d78?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1Mjh8MHwxfHNlYXJjaHwyfHxwYXJjaG1lbnQlMjBwYXBlciUyMHRleHR1cmUlMjBzZWFtbGVzc3xlbnwwfHx8fDE3NzA2NjI0MzV8MA&ixlib=rb-4.1.0&q=85')",
+      "stardust": "url('https://images.unsplash.com/photo-1760274479255-b8bf81991ef2?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxODl8MHwxfHNlYXJjaHwzfHxhYnN0cmFjdCUyMGdsb3dpbmclMjBnb2xkZW4lMjBwYXJ0aWNsZXMlMjBkYXJrJTIwYmFja2dyb3VuZHxlbnwwfHx8fDE3NzA2NjI0MzR8MA&ixlib=rb-4.1.0&q=85')"
+    },
+    "border_radius": {
+      "card": "rounded-xl",
+      "button": "rounded-full"
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-primary text-primary-foreground shadow-[0_0_15px_rgba(255,215,0,0.4)] hover:shadow-[0_0_25px_rgba(255,215,0,0.6)] transition-all duration-300 font-serif tracking-widest uppercase text-sm px-8 py-3 rounded-full border border-yellow-400/30",
+      "secondary": "bg-transparent border border-primary text-primary hover:bg-primary/10 transition-colors duration-300 font-serif tracking-widest uppercase text-sm px-8 py-3 rounded-full"
+    },
+    "cards": {
+      "verse_day": "bg-surface/80 backdrop-blur-md border border-primary/20 p-8 rounded-2xl shadow-parchment relative overflow-hidden group",
+      "section_card": "bg-surface border-l-4 p-6 rounded-r-xl shadow-sm hover:translate-x-1 transition-transform duration-200"
+    },
+    "navigation": {
+      "bottom_bar": "bg-background/90 backdrop-blur-lg border-t border-border/50 h-20 pb-4 pt-2"
+    }
+  },
+  "layout": {
+    "container": "container mx-auto px-4 md:px-6 lg:px-8 max-w-7xl",
+    "section_spacing": "py-12 md:py-20",
+    "grid_bento": "grid grid-cols-1 md:grid-cols-3 gap-6"
+  },
+  "motion": {
+    "fade_in": {
+      "initial": { "opacity": 0, "y": 20 },
+      "animate": { "opacity": 1, "y": 0 },
+      "transition": { "duration": 0.6, "ease": "easeOut" }
+    },
+    "glow_pulse": {
+      "animate": {
+        "textShadow": ["0 0 5px rgba(255,215,0,0.2)", "0 0 20px rgba(255,215,0,0.8)", "0 0 5px rgba(255,215,0,0.2)"]
+      },
+      "transition": { "duration": 3, "repeat": "Infinity" }
+    }
+  },
+  "accessibility": {
+    "contrast": "Ensure text contrast ratio of 4.5:1. Use Text Shadow on dark backgrounds for legibility.",
+    "reduced_motion": "Respect prefers-reduced-motion media query by disabling glow pulses."
+  },
+  "instructions_to_main_agent": [
+    "1. THEME SETUP: Use the provided color palette. Implement a theme provider that switches between 'Illuminated Manuscript' (Light) and 'Bioluminescent Sanctuary' (Dark).",
+    "2. TYPOGRAPHY: Load 'Cinzel' and 'Lato' fonts immediately. Apply 'Cinzel' to all headers.",
+    "3. BIBLE READER: The reader view must be immersive. Hide UI elements on scroll. Use the 'parchment' texture for the background in Light mode.",
+    "4. ANIMATIONS: Use Reanimated or Framer Motion for the 'Glow' effect on selected verses. When a user taps a verse, it should gently illuminate.",
+    "5. PATHS: The 'My Paths' feature should visually look like a constellation or a journey map, not just a list.",
+    "6. WIDGETS: The Daily Verse widget must use the 'glow_md' shadow and have a subtle border gradient.",
+    "7. TECH STACK: You are in an Expo Web environment. Use Tailwind classes (className) compatible with NativeWind or React Native Web.",
+    "8. IMAGES: Use the provided texture URLs as background images via CSS 'background-image'. Set background-size to cover.",
+    "9. DATA TEST ID: Add data-testid to all interactive elements."
+  ],
+  "universal_guidelines": [
+    "Avoid generic 'SaaS' look. No flat blue buttons.",
+    "Use generous padding (p-6, p-8) inside cards.",
+    "Never use pure black (#000000) for backgrounds; use the provided #02040A.",
+    "Interactive elements must provide immediate visual feedback (glow or scale)."
+  ]
+}
