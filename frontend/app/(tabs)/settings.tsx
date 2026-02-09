@@ -5,7 +5,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../components/ThemeContext';
-import Slider from '@react-native-community/slider';
 
 export default function SettingsScreen() {
   const { theme, isDark, toggleTheme, fontSize, setFontSize } = useTheme();
