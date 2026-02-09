@@ -6,7 +6,7 @@ import pytest
 import requests
 import os
 
-BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL').rstrip('/')
+BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://lumiverse-bible.preview.emergentagent.com').rstrip('/')
 
 class TestBibleEndpoints:
     """Bible reading endpoints - sections, books, chapters, verses"""
