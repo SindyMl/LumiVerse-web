@@ -1,0 +1,22 @@
+{
+  "buildCommand": "cd frontend && npx expo export -p web",
+  "outputDirectory": "frontend/dist",
+  "rewrites": [
+    { "source": "/", "destination": "/index.html" },
+    { "source": "/search", "destination": "/search.html" },
+    { "source": "/reader", "destination": "/reader.html" },
+    { "source": "/paths", "destination": "/paths.html" },
+    { "source": "/notes", "destination": "/notes.html" },
+    { "source": "/settings", "destination": "/settings.html" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
+      ]
+    }
+  ]
+}

@@ -13,7 +13,7 @@ export default function ReaderScreen() {
   const { theme, fontSize, userId } = useTheme();
   const router = useRouter();
   const { book, chapter, name, color, pathId, pathIndex } = useLocalSearchParams<{
-    book: string; chapter: string; name: string; color: string;
+    book: string; chapter: string; name: string; color: string; pathId?: string; pathIndex?: string;
   }>();
   const [chapterData, setChapterData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -23,6 +23,8 @@ export default function ReaderScreen() {
   const [noteText, setNoteText] = useState('');
   const [showHighlightPicker, setShowHighlightPicker] = useState(false);
   const [showInsight, setShowInsight] = useState(false);
+  const [progressUpdated, setProgressUpdated] = useState(false);
+  const [error, setError] = useState('');
   const sectionColor = color ? decodeURIComponent(color) : theme.primary;
   const chapterNum = parseInt(chapter || '1', 10);
 
@@ -38,8 +40,10 @@ export default function ReaderScreen() {
         userId ? api.getHighlights(userId) : Promise.resolve([]),
       ]);
       setChapterData(ch);
-      if (pathId && pathIndex !== undefined) {
-        await api.updatePath(pathId as string, { current_index: Number(pathIndex) + 1 });
+      if (pathId && pathIndex !== undefined && !progressUpdated) {
+        const nextIndex = Math.max(0, Number(pathIndex) + 1);
+        await api.updatePath(pathId as string, { current_index: nextIndex });
+        setProgressUpdated(true);
       }
       const hlMap: Record<number, string> = {};
       hl.filter((h: any) => h.book_abbrev === book && h.chapter_number === chapterNum)
@@ -47,6 +51,7 @@ export default function ReaderScreen() {
       setHighlights(hlMap);
     } catch (e) {
       console.error(e);
+      setError('This chapter could not be loaded. Check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -107,11 +112,15 @@ export default function ReaderScreen() {
     );
   }
 
+  if (error && !chapterData) {
+    return <SafeAreaView style={[styles.center, { backgroundColor: theme.background }]}><Text style={{ color: theme.foreground, textAlign: 'center', margin: 24 }}>{error}</Text><TouchableOpacity accessibilityRole="button" onPress={loadChapter} style={[styles.saveBtn, { backgroundColor: theme.primary, paddingHorizontal: 24 }]}><Text style={[styles.saveBtnText, { color: theme.primaryForeground }]}>Retry</Text></TouchableOpacity></SafeAreaView>;
+  }
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} testID="reader-screen">
       {/* Header */}
       <View style={[styles.headerRow, { borderBottomColor: theme.border }]}>
-        <TouchableOpacity onPress={() => router.back()} testID="reader-back-btn">
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Go back" onPress={() => router.back()} testID="reader-back-btn">
           <Ionicons name="arrow-back" size={24} color={theme.foreground} />
         </TouchableOpacity>
         <Text style={[styles.title, { color: theme.foreground }]}>
@@ -161,7 +170,7 @@ export default function ReaderScreen() {
         <TouchableOpacity
           testID="prev-chapter-btn"
           disabled={chapterNum <= 1}
-          onPress={() => router.replace(`/reader?book=${book}&chapter=${chapterNum - 1}&name=${encodeURIComponent(name || '')}&color=${encodeURIComponent(sectionColor)}`)}
+          onPress={() => router.replace(`/reader?book=${encodeURIComponent(book || '')}&chapter=${chapterNum - 1}&name=${encodeURIComponent(name || '')}&color=${encodeURIComponent(sectionColor)}${pathId ? `&pathId=${encodeURIComponent(pathId)}&pathIndex=${Math.max(0, Number(pathIndex || 0) - 1)}` : ''}`)}
           style={[styles.navBtn, chapterNum <= 1 && { opacity: 0.3 }]}
         >
           <Ionicons name="chevron-back" size={20} color={theme.foreground} />
@@ -170,7 +179,7 @@ export default function ReaderScreen() {
         <Text style={[styles.navChapter, { color: theme.textMuted }]}>Ch. {chapter}</Text>
         <TouchableOpacity
           testID="next-chapter-btn"
-          onPress={() => router.replace(`/reader?book=${book}&chapter=${chapterNum + 1}&name=${encodeURIComponent(name || '')}&color=${encodeURIComponent(sectionColor)}`)}
+          onPress={() => router.replace(`/reader?book=${encodeURIComponent(book || '')}&chapter=${chapterNum + 1}&name=${encodeURIComponent(name || '')}&color=${encodeURIComponent(sectionColor)}${pathId ? `&pathId=${encodeURIComponent(pathId)}&pathIndex=${Number(pathIndex || 0) + 1}` : ''}`)}
           style={styles.navBtn}
         >
           <Text style={[styles.navBtnText, { color: theme.foreground }]}>Next</Text>
