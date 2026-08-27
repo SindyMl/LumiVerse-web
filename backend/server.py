@@ -1,10 +1,11 @@
-from fastapi import FastAPI, APIRouter, HTTPException
+from fastapi import FastAPI, APIRouter, HTTPException, Query
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
 import random
+import re
 from pathlib import Path
 from pydantic import BaseModel, Field
 from typing import List, Optional
@@ -17,6 +18,8 @@ load_dotenv(ROOT_DIR / '.env')
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ.get('DB_NAME', 'test_database')]
+# This app intentionally has no login. All personal data is isolated to one server-side owner.
+SINGLE_USER_ID = os.environ.get('SINGLE_USER_ID', 'lumiverse-owner')
 
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
@@ -57,7 +60,9 @@ class DailyVerse(BaseModel):
     section_id: str
 
 class UserCreate(BaseModel):
-    display_name: Optional[str] = "Anonymous"
+    display_name: Optional[str] = Field(default="Anonymous", max_length=80)
+
+    model_config = {"str_strip_whitespace": True}
 
 class User(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -65,10 +70,10 @@ class User(BaseModel):
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 class PathCreate(BaseModel):
-    user_id: str
-    name: str
-    description: Optional[str] = ""
-    items: List[dict] = []
+    user_id: str = Field(min_length=1, max_length=100)
+    name: str = Field(min_length=1, max_length=120)
+    description: Optional[str] = Field(default="", max_length=1000)
+    items: List[dict] = Field(default_factory=list, max_length=200)
 
 class PathModel(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -81,18 +86,18 @@ class PathModel(BaseModel):
     updated_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 class PathUpdate(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
-    items: Optional[List[dict]] = None
-    current_index: Optional[int] = None
+    name: Optional[str] = Field(default=None, min_length=1, max_length=120)
+    description: Optional[str] = Field(default=None, max_length=1000)
+    items: Optional[List[dict]] = Field(default=None, max_length=200)
+    current_index: Optional[int] = Field(default=None, ge=0, le=200)
 
 class NoteCreate(BaseModel):
-    user_id: str
-    book_abbrev: str
-    chapter_number: int
-    verse_number: int
-    text: str
-    tags: List[str] = []
+    user_id: str = Field(min_length=1, max_length=100)
+    book_abbrev: str = Field(min_length=1, max_length=20)
+    chapter_number: int = Field(ge=1, le=200)
+    verse_number: int = Field(ge=1, le=200)
+    text: str = Field(min_length=1, max_length=10000)
+    tags: List[str] = Field(default_factory=list, max_length=20)
 
 class NoteModel(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -107,15 +112,15 @@ class NoteModel(BaseModel):
     updated_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 class NoteUpdate(BaseModel):
-    text: Optional[str] = None
-    tags: Optional[List[str]] = None
+    text: Optional[str] = Field(default=None, min_length=1, max_length=10000)
+    tags: Optional[List[str]] = Field(default=None, max_length=20)
 
 class HighlightCreate(BaseModel):
-    user_id: str
-    book_abbrev: str
-    chapter_number: int
-    verse_number: int
-    color: str = "#FFD700"
+    user_id: str = Field(min_length=1, max_length=100)
+    book_abbrev: str = Field(min_length=1, max_length=20)
+    chapter_number: int = Field(ge=1, le=200)
+    verse_number: int = Field(ge=1, le=200)
+    color: str = Field(default="#FFD700", pattern=r"^#[0-9A-Fa-f]{6}$")
 
 class HighlightModel(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -182,10 +187,13 @@ async def get_daily_verse():
     )
 
 @api_router.get("/search")
-async def search_bible(q: str, limit: int = 20):
+async def search_bible(q: str = Query(min_length=2, max_length=100), limit: int = Query(default=20, ge=1, le=50)):
+    safe_query = re.escape(q.strip())
+    if not safe_query:
+        raise HTTPException(400, "Search query is required")
     pipeline = [
         {"$unwind": "$verses"},
-        {"$match": {"verses.text": {"$regex": q, "$options": "i"}}},
+        {"$match": {"verses.text": {"$regex": safe_query, "$options": "i"}}},
         {"$limit": limit},
         {"$project": {
             "_id": 0,
@@ -203,20 +211,22 @@ async def search_bible(q: str, limit: int = 20):
 # --- Auth Endpoints ---
 @api_router.post("/auth/anonymous", response_model=User)
 async def create_anonymous_user(input_data: UserCreate = None):
-    user = User(display_name=input_data.display_name if input_data else "Anonymous")
-    user_dict = user.model_dump()
-    await db.users.insert_one({**user_dict})
+    existing = await db.users.find_one({"id": SINGLE_USER_ID}, {"_id": 0})
+    if existing:
+        return User(**existing)
+    user = User(id=SINGLE_USER_ID, display_name=input_data.display_name if input_data else "Anonymous")
+    await db.users.insert_one(user.model_dump())
     return user
 
 # --- Path Endpoints ---
 @api_router.get("/paths")
 async def get_paths(user_id: str):
-    paths = await db.paths.find({"user_id": user_id}, {"_id": 0}).to_list(100)
+    paths = await db.paths.find({"user_id": SINGLE_USER_ID}, {"_id": 0}).to_list(100)
     return paths
 
 @api_router.post("/paths", response_model=PathModel)
 async def create_path(data: PathCreate):
-    path = PathModel(**data.model_dump())
+    path = PathModel(**data.model_dump(exclude={"user_id"}), user_id=SINGLE_USER_ID)
     path_dict = path.model_dump()
     await db.paths.insert_one({**path_dict})
     return path
@@ -225,7 +235,7 @@ async def create_path(data: PathCreate):
 async def update_path(path_id: str, data: PathUpdate):
     update_data = {k: v for k, v in data.model_dump().items() if v is not None}
     update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
-    result = await db.paths.update_one({"id": path_id}, {"$set": update_data})
+    result = await db.paths.update_one({"id": path_id, "user_id": SINGLE_USER_ID}, {"$set": update_data})
     if result.matched_count == 0:
         raise HTTPException(404, "Path not found")
     updated = await db.paths.find_one({"id": path_id}, {"_id": 0})
@@ -233,7 +243,7 @@ async def update_path(path_id: str, data: PathUpdate):
 
 @api_router.delete("/paths/{path_id}")
 async def delete_path(path_id: str):
-    result = await db.paths.delete_one({"id": path_id})
+    result = await db.paths.delete_one({"id": path_id, "user_id": SINGLE_USER_ID})
     if result.deleted_count == 0:
         raise HTTPException(404, "Path not found")
     return {"status": "deleted"}
@@ -241,13 +251,13 @@ async def delete_path(path_id: str):
 # --- Note Endpoints ---
 @api_router.get("/notes")
 async def get_notes(user_id: str):
-    notes = await db.notes.find({"user_id": user_id}, {"_id": 0}).to_list(500)
+    notes = await db.notes.find({"user_id": SINGLE_USER_ID}, {"_id": 0}).to_list(500)
     return notes
 
 @api_router.post("/notes", response_model=NoteModel)
 async def create_note(data: NoteCreate):
     book = await db.books.find_one({"abbrev": data.book_abbrev}, {"_id": 0})
-    note = NoteModel(**data.model_dump(), book_name=book["name"] if book else "")
+    note = NoteModel(**data.model_dump(exclude={"user_id"}), user_id=SINGLE_USER_ID, book_name=book["name"] if book else "")
     note_dict = note.model_dump()
     await db.notes.insert_one({**note_dict})
     return note
@@ -256,7 +266,7 @@ async def create_note(data: NoteCreate):
 async def update_note(note_id: str, data: NoteUpdate):
     update_data = {k: v for k, v in data.model_dump().items() if v is not None}
     update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
-    result = await db.notes.update_one({"id": note_id}, {"$set": update_data})
+    result = await db.notes.update_one({"id": note_id, "user_id": SINGLE_USER_ID}, {"$set": update_data})
     if result.matched_count == 0:
         raise HTTPException(404, "Note not found")
     updated = await db.notes.find_one({"id": note_id}, {"_id": 0})
@@ -264,7 +274,7 @@ async def update_note(note_id: str, data: NoteUpdate):
 
 @api_router.delete("/notes/{note_id}")
 async def delete_note(note_id: str):
-    result = await db.notes.delete_one({"id": note_id})
+    result = await db.notes.delete_one({"id": note_id, "user_id": SINGLE_USER_ID})
     if result.deleted_count == 0:
         raise HTTPException(404, "Note not found")
     return {"status": "deleted"}
@@ -272,13 +282,13 @@ async def delete_note(note_id: str):
 # --- Highlight Endpoints ---
 @api_router.get("/highlights")
 async def get_highlights(user_id: str):
-    highlights = await db.highlights.find({"user_id": user_id}, {"_id": 0}).to_list(1000)
+    highlights = await db.highlights.find({"user_id": SINGLE_USER_ID}, {"_id": 0}).to_list(1000)
     return highlights
 
 @api_router.post("/highlights", response_model=HighlightModel)
 async def create_highlight(data: HighlightCreate):
     existing = await db.highlights.find_one({
-        "user_id": data.user_id,
+        "user_id": SINGLE_USER_ID,
         "book_abbrev": data.book_abbrev,
         "chapter_number": data.chapter_number,
         "verse_number": data.verse_number
@@ -291,14 +301,14 @@ async def create_highlight(data: HighlightCreate):
         updated = await db.highlights.find_one({"id": existing["id"]}, {"_id": 0})
         return HighlightModel(**updated)
     book = await db.books.find_one({"abbrev": data.book_abbrev}, {"_id": 0})
-    highlight = HighlightModel(**data.model_dump(), book_name=book["name"] if book else "")
+    highlight = HighlightModel(**data.model_dump(exclude={"user_id"}), user_id=SINGLE_USER_ID, book_name=book["name"] if book else "")
     h_dict = highlight.model_dump()
     await db.highlights.insert_one({**h_dict})
     return highlight
 
 @api_router.delete("/highlights/{highlight_id}")
 async def delete_highlight(highlight_id: str):
-    result = await db.highlights.delete_one({"id": highlight_id})
+    result = await db.highlights.delete_one({"id": highlight_id, "user_id": SINGLE_USER_ID})
     if result.deleted_count == 0:
         raise HTTPException(404, "Highlight not found")
     return {"status": "deleted"}
@@ -306,12 +316,13 @@ async def delete_highlight(highlight_id: str):
 # Include router
 app.include_router(api_router)
 
+allowed_origins = [origin.strip() for origin in os.environ.get("ALLOWED_ORIGINS", "http://localhost:8081,http://localhost:3000").split(",") if origin.strip()]
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=allowed_origins,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
