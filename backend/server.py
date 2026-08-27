@@ -1,10 +1,11 @@
-from fastapi import FastAPI, APIRouter, HTTPException
+from fastapi import FastAPI, APIRouter, HTTPException, Query
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
 import random
+import re
 from pathlib import Path
 from pydantic import BaseModel, Field
 from typing import List, Optional
@@ -57,7 +58,9 @@ class DailyVerse(BaseModel):
     section_id: str
 
 class UserCreate(BaseModel):
-    display_name: Optional[str] = "Anonymous"
+    display_name: Optional[str] = Field(default="Anonymous", max_length=80)
+
+    model_config = {"str_strip_whitespace": True}
 
 class User(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -65,10 +68,10 @@ class User(BaseModel):
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 class PathCreate(BaseModel):
-    user_id: str
-    name: str
-    description: Optional[str] = ""
-    items: List[dict] = []
+    user_id: str = Field(min_length=1, max_length=100)
+    name: str = Field(min_length=1, max_length=120)
+    description: Optional[str] = Field(default="", max_length=1000)
+    items: List[dict] = Field(default_factory=list, max_length=200)
 
 class PathModel(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -87,12 +90,12 @@ class PathUpdate(BaseModel):
     current_index: Optional[int] = None
 
 class NoteCreate(BaseModel):
-    user_id: str
-    book_abbrev: str
-    chapter_number: int
-    verse_number: int
-    text: str
-    tags: List[str] = []
+    user_id: str = Field(min_length=1, max_length=100)
+    book_abbrev: str = Field(min_length=1, max_length=20)
+    chapter_number: int = Field(ge=1, le=200)
+    verse_number: int = Field(ge=1, le=200)
+    text: str = Field(min_length=1, max_length=10000)
+    tags: List[str] = Field(default_factory=list, max_length=20)
 
 class NoteModel(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -182,10 +185,13 @@ async def get_daily_verse():
     )
 
 @api_router.get("/search")
-async def search_bible(q: str, limit: int = 20):
+async def search_bible(q: str = Query(min_length=2, max_length=100), limit: int = Query(default=20, ge=1, le=50)):
+    safe_query = re.escape(q.strip())
+    if not safe_query:
+        raise HTTPException(400, "Search query is required")
     pipeline = [
         {"$unwind": "$verses"},
-        {"$match": {"verses.text": {"$regex": q, "$options": "i"}}},
+        {"$match": {"verses.text": {"$regex": safe_query, "$options": "i"}}},
         {"$limit": limit},
         {"$project": {
             "_id": 0,
@@ -306,12 +312,13 @@ async def delete_highlight(highlight_id: str):
 # Include router
 app.include_router(api_router)
 
+allowed_origins = [origin.strip() for origin in os.environ.get("ALLOWED_ORIGINS", "http://localhost:8081,http://localhost:3000").split(",") if origin.strip()]
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=allowed_origins,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
