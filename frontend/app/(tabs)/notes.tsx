@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  ActivityIndicator, Alert, TextInput,
+  ActivityIndicator, Alert, TextInput, Modal, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,6 +14,8 @@ export default function NotesScreen() {
   const [highlights, setHighlights] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'notes' | 'highlights'>('notes');
+  const [editing, setEditing] = useState<any>(null);
+  const [editText, setEditText] = useState('');
 
   useEffect(() => {
     loadData();
@@ -30,6 +32,13 @@ export default function NotesScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const saveEdit = async () => {
+    if (!editing || !editText.trim()) return;
+    const updated = await api.updateNote(editing.id, { text: editText.trim(), tags: editing.tags || [] });
+    setNotes((prev) => prev.map((note) => note.id === editing.id ? { ...note, text: updated.text || editText.trim() } : note));
+    setEditing(null);
   };
 
   const deleteNote = async (id: string) => {
@@ -99,9 +108,7 @@ export default function NotesScreen() {
                 <Text style={[styles.noteRef, { color: theme.accent }]}>
                   {item.book_name} {item.chapter_number}:{item.verse_number}
                 </Text>
-                <TouchableOpacity onPress={() => deleteNote(item.id)} testID={`delete-note-${item.id}`}>
-                  <Ionicons name="trash-outline" size={18} color="#FF6347" />
-                </TouchableOpacity>
+                <View style={{ flexDirection: 'row', gap: 14 }}><TouchableOpacity onPress={() => { setEditing(item); setEditText(item.text); }} testID={`edit-note-${item.id}`}><Ionicons name="create-outline" size={18} color={theme.accent} /></TouchableOpacity><TouchableOpacity onPress={() => deleteNote(item.id)} testID={`delete-note-${item.id}`}><Ionicons name="trash-outline" size={18} color="#FF6347" /></TouchableOpacity></View>
               </View>
               <Text style={[styles.noteText, { color: theme.foreground }]}>{item.text}</Text>
               {item.tags?.length > 0 && (
@@ -142,6 +149,7 @@ export default function NotesScreen() {
           )}
         />
       )}
+      <Modal visible={!!editing} transparent animationType="slide"><KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}><View style={[styles.editor, { backgroundColor: theme.surface }]}><View style={styles.noteHeader}><Text style={[styles.modalTitle, { color: theme.foreground }]}>Edit Note</Text><TouchableOpacity onPress={() => setEditing(null)}><Ionicons name="close" size={24} color={theme.textMuted} /></TouchableOpacity></View><TextInput testID="edit-note-input" value={editText} onChangeText={setEditText} multiline style={[styles.editInput, { color: theme.foreground, borderColor: theme.border }]} /><TouchableOpacity testID="save-edit-note-btn" onPress={saveEdit} style={[styles.saveBtn, { backgroundColor: theme.primary }]}><Text style={{ color: theme.primaryForeground, fontWeight: '700' }}>Save Changes</Text></TouchableOpacity></View></KeyboardAvoidingView></Modal>
     </SafeAreaView>
   );
 }
@@ -165,4 +173,9 @@ const styles = StyleSheet.create({
   tagText: { fontSize: 11, fontWeight: '600' },
   highlightCard: { padding: 16, borderRadius: 12, borderWidth: 1, borderLeftWidth: 4, marginBottom: 10, flexDirection: 'row', alignItems: 'center' },
   colorDot: { width: 16, height: 16, borderRadius: 8 },
+  modalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' },
+  editor: { width: '90%', padding: 20, borderRadius: 18 },
+  modalTitle: { fontSize: 18, fontWeight: '700' },
+  editInput: { minHeight: 120, borderWidth: 1, borderRadius: 12, padding: 12, fontSize: 15, textAlignVertical: 'top' },
+  saveBtn: { marginTop: 14, padding: 14, borderRadius: 24, alignItems: 'center' },
 });

@@ -46,6 +46,7 @@ function RootNav() {
         <Stack.Screen name="paths" options={{ presentation: 'card' }} />
         <Stack.Screen name="create-path" options={{ presentation: 'modal' }} />
         <Stack.Screen name="study-session" options={{ presentation: 'fullScreenModal' }} />
+        <Stack.Screen name="search" options={{ presentation: 'card' }} />
       </Stack>
     </>
   );

@@ -107,7 +107,7 @@ export default function PathsScreen() {
                 onPress={() => {
                   const currentItem = item.items[item.current_index || 0];
                   if (currentItem) {
-                    router.push(`/reader?book=${currentItem.book_abbrev}&chapter=${currentItem.chapter_number}&name=${encodeURIComponent(currentItem.book_name || '')}&color=${encodeURIComponent(theme.primary)}`);
+                    router.push(`/reader?book=${currentItem.book_abbrev}&chapter=${currentItem.chapter_number}&name=${encodeURIComponent(currentItem.book_name || '')}&color=${encodeURIComponent(theme.primary)}&pathId=${item.id}&pathIndex=${item.current_index || 0}`);
                   }
                 }}
                 style={[styles.resumeBtn, { borderColor: theme.primary }]}

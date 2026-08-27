@@ -16,6 +16,8 @@ export default function StudySessionScreen() {
   const [loading, setLoading] = useState(true);
   const [timer, setTimer] = useState(0);
   const [isRunning, setIsRunning] = useState(true);
+  const [promptIndex, setPromptIndex] = useState(0);
+  const prompts = ['Take a deep breath. Let the words settle in your heart.', 'Read slowly and notice the phrase that stays with you.', 'What might this verse be inviting you to practice today?'];
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -46,6 +48,7 @@ export default function StudySessionScreen() {
   };
 
   const nextVerse = async () => {
+    setPromptIndex((index) => (index + 1) % prompts.length);
     fadeAnim.setValue(0);
     setLoading(true);
     await loadVerse();
@@ -83,7 +86,7 @@ export default function StudySessionScreen() {
           <Animated.View style={[styles.verseCard, { opacity: fadeAnim }]}>
             <View style={[styles.glowBorder, { borderColor: theme.primary + '40' }]}>
               <Text style={[styles.verseText, { color: theme.foreground, fontSize: fontSize + 6 }]}>
-                "{verse.text}"
+                {`"${verse.text}"`}
               </Text>
               <View style={styles.refRow}>
                 <View style={[styles.refBadge, { backgroundColor: theme.primary + '20' }]}>
@@ -103,7 +106,7 @@ export default function StudySessionScreen() {
       <View style={[styles.lumiMoment, { backgroundColor: theme.surface, borderColor: theme.border }]}>
         <Ionicons name="sparkles" size={16} color={theme.primary} />
         <Text style={[styles.lumiText, { color: theme.textMuted }]}>
-          Take a deep breath. Let the words settle in your heart.
+          {prompts[promptIndex]}
         </Text>
       </View>
     </SafeAreaView>

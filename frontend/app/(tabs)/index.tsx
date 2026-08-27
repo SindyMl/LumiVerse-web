@@ -85,7 +85,7 @@ export default function HomeScreen() {
                 <Text style={[styles.verseLabelText, { color: theme.primary }]}>Verse of the Day</Text>
               </View>
               <Text style={[styles.verseText, { color: theme.foreground }]}>
-                "{dailyVerse.text}"
+                {`"${dailyVerse.text}"`}
               </Text>
               <Text style={[styles.verseRef, { color: theme.textMuted }]}>
                 — {dailyVerse.book_name} {dailyVerse.chapter}:{dailyVerse.verse_number}
@@ -111,6 +111,14 @@ export default function HomeScreen() {
           >
             <Ionicons name="library-outline" size={24} color={theme.primary} />
             <Text style={[styles.actionText, { color: theme.foreground }]}>Sections</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            testID="search-btn"
+            style={[styles.actionBtn, { backgroundColor: theme.surface, borderColor: theme.border }]}
+            onPress={() => router.push('/search')}
+          >
+            <Ionicons name="search-outline" size={24} color={theme.accent} />
+            <Text style={[styles.actionText, { color: theme.foreground }]}>Search</Text>
           </TouchableOpacity>
           <TouchableOpacity
             testID="study-btn"
