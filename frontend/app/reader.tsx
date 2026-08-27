@@ -12,7 +12,7 @@ import { api } from '../components/ApiService';
 export default function ReaderScreen() {
   const { theme, fontSize, userId } = useTheme();
   const router = useRouter();
-  const { book, chapter, name, color } = useLocalSearchParams<{
+  const { book, chapter, name, color, pathId, pathIndex } = useLocalSearchParams<{
     book: string; chapter: string; name: string; color: string;
   }>();
   const [chapterData, setChapterData] = useState<any>(null);
@@ -22,6 +22,7 @@ export default function ReaderScreen() {
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [noteText, setNoteText] = useState('');
   const [showHighlightPicker, setShowHighlightPicker] = useState(false);
+  const [showInsight, setShowInsight] = useState(false);
   const sectionColor = color ? decodeURIComponent(color) : theme.primary;
   const chapterNum = parseInt(chapter || '1', 10);
 
@@ -37,6 +38,9 @@ export default function ReaderScreen() {
         userId ? api.getHighlights(userId) : Promise.resolve([]),
       ]);
       setChapterData(ch);
+      if (pathId && pathIndex !== undefined) {
+        await api.updatePath(pathId as string, { current_index: Number(pathIndex) + 1 });
+      }
       const hlMap: Record<number, string> = {};
       hl.filter((h: any) => h.book_abbrev === book && h.chapter_number === chapterNum)
         .forEach((h: any) => { hlMap[h.verse_number] = h.color; });
@@ -51,6 +55,18 @@ export default function ReaderScreen() {
   const handleVerseLongPress = (verseNum: number) => {
     setSelectedVerse(verseNum);
     setShowHighlightPicker(true);
+  };
+
+  const removeHighlight = async () => {
+    if (!selectedVerse || !userId) return;
+    const existing = Object.entries(highlights).find(([verse]) => Number(verse) === selectedVerse);
+    if (existing) {
+      const all = await api.getHighlights(userId);
+      const record = all.find((h: any) => h.book_abbrev === book && h.chapter_number === chapterNum && h.verse_number === selectedVerse);
+      if (record) await api.deleteHighlight(record.id);
+      setHighlights((prev) => { const next = { ...prev }; delete next[selectedVerse]; return next; });
+    }
+    setShowHighlightPicker(false);
   };
 
   const applyHighlight = async (clr: string) => {
@@ -104,9 +120,7 @@ export default function ReaderScreen() {
         <TouchableOpacity
           testID="reader-insight-btn"
           onPress={() => {
-            // Placeholder AI Insight
-            setSelectedVerse(null);
-            setShowNoteModal(false);
+            setShowInsight(true);
           }}
         >
           <Ionicons name="sparkles-outline" size={22} color={theme.primary} />
@@ -180,6 +194,7 @@ export default function ReaderScreen() {
                 />
               ))}
             </View>
+            {selectedVerse && highlights[selectedVerse] && <TouchableOpacity testID="remove-highlight-btn" onPress={removeHighlight} style={[styles.noteBtn, { borderColor: theme.border }]}><Ionicons name="remove-circle-outline" size={18} color={theme.accent} /><Text style={[styles.noteBtnText, { color: theme.accent }]}>Remove Highlight</Text></TouchableOpacity>}
             <TouchableOpacity
               testID="add-note-btn"
               onPress={openNoteForVerse}
@@ -191,6 +206,8 @@ export default function ReaderScreen() {
           </View>
         </TouchableOpacity>
       </Modal>
+
+      <Modal visible={showInsight} transparent animationType="fade" testID="insight-modal"><TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowInsight(false)}><View style={[styles.pickerCard, { backgroundColor: theme.surface }]}><Ionicons name="sparkles" size={30} color={theme.primary} /><Text style={[styles.pickerTitle, { color: theme.foreground, marginTop: 12 }]}>AI Insight is coming soon</Text><Text style={[styles.pickerSub, { color: theme.textMuted, textAlign: 'center' }]}>Personalized reflection for {name ? decodeURIComponent(name) : 'this chapter'} will appear here.</Text><TouchableOpacity testID="close-insight-btn" onPress={() => setShowInsight(false)} style={[styles.noteBtn, { borderColor: theme.primary }]}><Text style={[styles.noteBtnText, { color: theme.primary }]}>Close</Text></TouchableOpacity></View></TouchableOpacity></Modal>
 
       {/* Note Modal */}
       <Modal visible={showNoteModal} transparent animationType="slide" testID="note-modal">
