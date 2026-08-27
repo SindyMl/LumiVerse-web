@@ -13,10 +13,11 @@ export default function SearchScreen() {
   const [results, setResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [error, setError] = useState('');
   const submit = async () => {
     if (!query.trim()) return;
-    setLoading(true); setSearched(true);
-    try { setResults(await api.search(query.trim())); } catch { setResults([]); }
+    setLoading(true); setSearched(true); setError('');
+    try { setResults(await api.search(query.trim())); } catch { setResults([]); setError('Search is unavailable. Check your connection and try again.'); }
     finally { setLoading(false); }
   };
   return <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} testID="search-screen">
@@ -27,8 +28,9 @@ export default function SearchScreen() {
     <View style={[styles.searchBox, { backgroundColor: theme.surface, borderColor: theme.border }]}>
       <Ionicons name="search" size={20} color={theme.textMuted} />
       <TextInput testID="search-input" value={query} onChangeText={setQuery} onSubmitEditing={submit} returnKeyType="search" placeholder="Search verse content" placeholderTextColor={theme.textMuted} style={[styles.input, { color: theme.foreground }]} />
-      <TouchableOpacity testID="search-submit-btn" onPress={submit}><Ionicons name="arrow-forward-circle" size={24} color={theme.primary} /></TouchableOpacity>
+      <TouchableOpacity accessibilityRole="button" accessibilityLabel="Search Bible" testID="search-submit-btn" onPress={submit}><Ionicons name="arrow-forward-circle" size={24} color={theme.primary} /></TouchableOpacity>
     </View>
+    {error ? <Text accessibilityRole="alert" style={[styles.empty, { color: theme.primary }]}>{error}</Text> : null}
     {loading ? <ActivityIndicator style={styles.loader} color={theme.primary} /> : <FlatList data={results} keyExtractor={(item, i) => item.id || `${item.book_abbrev}-${item.chapter_number}-${item.verse_number}-${i}`} contentContainerStyle={styles.list} ListEmptyComponent={searched ? <Text style={[styles.empty, { color: theme.textMuted }]}>No verses found. Try another phrase.</Text> : <Text style={[styles.empty, { color: theme.textMuted }]}>Search the full Bible by verse content.</Text>} renderItem={({ item }) => <TouchableOpacity testID={`search-result-${item.verse_number}`} onPress={() => router.push(`/reader?book=${item.book_abbrev}&chapter=${item.chapter_number}&name=${encodeURIComponent(item.book_name || '')}`)} style={[styles.result, { backgroundColor: theme.surface, borderColor: theme.border }]}><Text style={[styles.ref, { color: theme.primary }]}>{item.book_name} {item.chapter_number}:{item.verse_number}</Text><Text style={[styles.text, { color: theme.foreground }]}>{item.text}</Text></TouchableOpacity>} />}
   </SafeAreaView>;
 }
