@@ -15,8 +15,15 @@ from datetime import datetime, timezone
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
+mongo_url = os.environ.get('MONGO_URL') or os.environ.get('MONGODB_CONNECTION_STRING')
+if not mongo_url:
+    raise RuntimeError('Set MONGO_URL or MONGODB_CONNECTION_STRING in the backend environment')
+client = AsyncIOMotorClient(
+    mongo_url,
+    serverSelectionTimeoutMS=10000,
+    connectTimeoutMS=10000,
+    tls=True,
+)
 db = client[os.environ.get('DB_NAME', 'test_database')]
 # This app intentionally has no login. All personal data is isolated to one server-side owner.
 SINGLE_USER_ID = os.environ.get('SINGLE_USER_ID', 'lumiverse-owner')
